@@ -2,11 +2,23 @@ import urllib.request
 import re
 from bs4 import BeautifulSoup
 import pymysql.cursors
+import datetime
 
+def printer(string):
+    string=datetime.datetime.now()+": "+string
+    with open("error.log", "a") as myfile:
+        myfile.write(string,"\n")
 def r(s): #formatting and removing white spaces and line breaks
     return re.sub(('^\s+|\s+$'),'',s)
 def l(s): #getting only digits
     return re.sub(('\D'),'',s)
+def ym(s): #getting years and months out of string
+    a= re.sub((' Years, '),'',s)
+    a= re.sub((' Months'),'',a)
+    a=int(a)
+    if(a<100):
+        a=int(a/10)*100+a%10
+    return a
 def ins_major(s):
     if(s=="Mechanical Engineering"):
         return 5
@@ -25,8 +37,11 @@ def ins_grade(htmlcursor):
     elif(scale==8): #8grade not percentage
         grade=(int(grade*100))*10+8
     return grade
+
+
 urls = 'file:///C:/Users/tarunuday/Documents/scrapdata/mech.html'
 print("Connecting to ",urls)
+
 htmlfile = urllib.request.urlopen(urls)
 soup = BeautifulSoup(htmlfile,'html.parser')
 test=soup.find_all("table", "tdborder")[2].find_all("tr")
@@ -80,7 +95,6 @@ while(i<5):#len(test)):
     except ValueError:
         insert_ielts=0
     
-
     ###############Section 3 - UG Details
     htmlcursor=data.find_all("td", "orange_title tdhor")[3].parent
     htmlcursor=htmlcursor.next_sibling
@@ -108,8 +122,8 @@ while(i<5):#len(test)):
     #entering data to database
     with connection.cursor() as cursor:
         # Create a new record
-        sql = "INSERT INTO `profiles` (`extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `engexam`, `industry`, `research`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        cursor.execute(sql, (insert_extractid, insert_name, int("0"), insert_college, insert_major, int("66810"), insert_mainexam, insert_engexam, int("0"), int("0"), " " ))
+        sql = "INSERT INTO `profiles` (`extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship` `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        cursor.execute(sql, (insert_extractid, insert_name, int("0"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, "" ))
     # connection is not autocommit by default. So you must commit to save
     # your changes.
     connection.commit()
