@@ -7,32 +7,6 @@ def r(s): #formatting and removing white spaces and line breaks
     return re.sub(('^\s+|\s+$'),'',s)
 def l(s): #getting only digits
     return re.sub(('\D'),'',s)
-def f1ag_spec(): #check for specialisation
-    try:
-        if(r(ix.find_all("tr")[6].find_all("td")[0].string)=="Specialization"):
-            return 1
-        elif(r(ix.find_all("tr")[6].find_all("td")[0].string)=="Term and Year"):
-            return 0
-    except:
-        print ("ERROR IN CHECKING FOR SPECIALIZATION")
-        return 0
-def flag_undergrad(): #check for specialisation
-    try:
-        if(r(ix.find_all("tr")[6].find_all("td")[0].string)=="Specialization"):
-            return 1
-        elif(r(ix.find_all("tr")[6].find_all("td")[0].string)=="Term and Year"):
-            return 0
-    except:
-        print ("ERROR IN CHECKING FOR SPECIALIZATION")
-        return 0
-def ins_gre(a,b,c):
-    if((a<=170)&(b<170)&(a>130)&(b>130)&(c<6.0)):
-        return int(ins3*10+ins2*100+ins1*100000+100000000)
-    if((a<=800)&(b<800)&(a>200)&(b>200)&(c<6.0)):
-        return int(ins3*10+ins2*100+ins1*100000+200000000)
-    else: 
-        print("Error in inputs - GRE Scores not reported correctly")
-        return 0
 def ins_major(s):
     if(s=="Mechanical Engineering"):
         return 5
@@ -51,6 +25,7 @@ def ins_grade(htmlcursor):
     elif(scale==8): #8grade not percentage
         grade=(int(grade*100))*10+8
     return grade
+
 urls = 'file:///C:/Users/tarunuday/Documents/scrapdata/mech.html'
 print("Connecting to ",urls)
 htmlfile = urllib.request.urlopen(urls)
@@ -92,11 +67,19 @@ while(i<5):#len(test)):
 
     ###############Section 2 - Standardized Test Scores
     htmlcursor=data.find_all("td", "orange_title tdhor")[2].parent
-    htmlcursor=htmlcursor.next_sibling
-    htmlcursor=htmlcursor.next_sibling
-    insidecursor=htmlcursor.td.table
-    print(insidecursor.find_all("tr")[0])
-    
+    htmlcursor=htmlcursor.next_sibling.next_sibling
+    insidecursor=htmlcursor.td.table.find_all("tr")[0]
+    insert_gre=int(r(insidecursor.find_all("td")[2].string)+r(insidecursor.find_all("td")[4].string)+str(int(float(r(insidecursor.find_all("td")[6].string))*10)))
+    insidecursor=insidecursor.next_sibling.next_sibling.next_sibling.next_sibling
+    try:
+        insert_toefl=int(r(insidecursor.find_all("td")[2].string))
+    except ValueError:
+        insert_toefl=0
+    insidecursor=insidecursor.next_sibling.next_sibling
+    try:
+        insert_ielts=int(r(insidecursor.find_all("td")[2].string))
+    except ValueError:
+        insert_ielts=0
 
     ###############Section 3 - UG Details
     htmlcursor=data.find_all("td", "orange_title tdhor")[3].parent
@@ -122,25 +105,13 @@ while(i<5):#len(test)):
     elif(htmlcursor.find_all("td")[0].string=="Grade"):
         insert_gpa=ins_grade(htmlcursor)
 
-    ins1=int(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[0].find_all("td")[2].string))
-    ins2=int(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[0].find_all("td")[4].string))
-    ins3=float(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[0].find_all("td")[6].string))
-    insert_mainexam=ins_gre(ins1,ins2,ins3)
-    
-    insert_college=r(ix.find_all("tr")[10+flag_spec].find_all("td")[1].string)
-    #chk for toefl and ielts
-    if(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[2].find_all("td")[2].string)!=""):
-        insert_engexam=int(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[2].find_all("td")[2].string))
-    elif(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[3].find_all("td")[2].string)!=""):
-        insert_engexam=int(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[3].find_all("td")[2].string))
-    print("----------- toefl:", insert_engexam)
-    print("-----------", ins1, "---------------", ins2, "--------------------", ins3, "----------------", insert_mainexam)
+    #---------------
     
     #entering data to database
     with connection.cursor() as cursor:
         # Create a new record
-        sql = "INSERT INTO `profiles` (`extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `engexam`, `industry`, `research`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        cursor.execute(sql, (insert_extractid, insert_name, int("0"), insert_college, insert_major, int("66810"), insert_mainexam, insert_engexam, int("0"), int("0"), " " ))
+        sql = "INSERT INTO `profiles` (`extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `industry`, `research`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        cursor.execute(sql, (insert_extractid, insert_name, int("0"), insert_college, insert_major, int("66810"), insert_gre, insert_toefl, insert_ielts, int("0"), int("0"), " " ))
     # connection is not autocommit by default. So you must commit to save
     # your changes.
     connection.commit()
