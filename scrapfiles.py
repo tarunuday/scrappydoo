@@ -34,6 +34,22 @@ def ins_grade(htmlcursor):
     elif(scale==8): #8grade not percentage
         grade=(int(grade*100))*10+8
     return grade
+def uni_check():
+    if(r(htmlcursor[1].td.string))=="University details not updated":
+        return 0    
+    else:
+        return len(data.find_all("table", "tdborder")[1].find_all("tr"))
+def uni(s):
+    s=r(s)
+    if(s=="Result not available"):
+        return "0"
+    elif(s=="Admit"):
+        return "1"
+    elif(s=="Reject"):
+        return "2"
+    else: 
+        print("wtf")
+        return "wtf"
 
 
 urls = 'file:///C:/Users/tarunuday/Documents/scrapdata/mech.html'
@@ -42,20 +58,23 @@ print("Connecting to ",urls)
 htmlfile = urllib.request.urlopen(urls)
 soup = BeautifulSoup(htmlfile,'html.parser')
 test=soup.find_all("table", "tdborder")[2].find_all("tr")
-print("Connection Established.")
-print("Connecting to database and starting loop.")
+print("Connection established")
+print("Connecting to database...")
 i=2
-
 # Connect to the database
-connection = pymysql.connect(host='localhost',
-                             user='root',
-                             password='secret',
-                             db='playhard',
-                             charset='utf8mb4',
-                             cursorclass=pymysql.cursors.DictCursor)
+try:
+    connection = pymysql.connect(host='localhost',
+                                 user='root',
+                                 password='secret',
+                                 db='playhard',
+                                 charset='utf8mb4',
+                                 cursorclass=pymysql.cursors.DictCursor)
+    print("Connection to database established")
+
+except pymysql.err.OperationalError:
+    print("Access denied for ",user,"@",host)
 
 while(i<5):#len(test)):
-
     ###############Start page no i
     link='http://edulix.com/unisearch/'
     link+=test[i].a["href"]
@@ -66,10 +85,17 @@ while(i<5):#len(test)):
     ###############EXTRACT ID
     insert_extractid=1000000+int(l(test[i].a["href"]))
 
-    ###############Section 1 - NAME
+    ###############Checking for Universities
+    if(not(uni_check)):
+        continue;
+
+    ###############Section 0 - NAME
     insert_name=r(data.find_all("table", "tdborder")[0].find_all("tr")[2].find_all("td")[1].string)
     if(insert_name==""):
         insert_name=r(data.find_all("a", "no_uline")[0].string)
+
+    ###############Section 1 - App Details
+
 
     ###############Section 2 - Standardized Test Scores
     htmlcursor=data.find_all("td", "orange_title tdhor")[2].parent
@@ -108,7 +134,8 @@ while(i<5):#len(test)):
     elif(htmlcursor.find_all("td")[0].string=="Grade"):
         insert_gpa=ins_grade(htmlcursor)
     
-    ###############Section 4 - experience   
+    ###############Section 4 - experience
+    ######## ym returns values in ymm format   
     htmlcursor=data.find_all("td", "orange_title tdhor")[4].parent
     htmlcursor=htmlcursor.next_sibling.next_sibling
     insert_journal=l(htmlcursor.find_all("td")[1].string)
@@ -122,14 +149,60 @@ while(i<5):#len(test)):
     insert_internship=ym(r(htmlcursor.find_all("td")[1].string))
 
     ###############Section 8 - Miscellaneous   
-    #if there is no data entered by a user in their misc section, that section will not be displayed in the profile summary page
-    #that means find_all("td", "orange_title tdhor")[8] wouldn't exist and cause an index error
+    ########if there is no data entered by a user in their misc section, that section will not be displayed in the profile summary page
+    ########that means find_all("td", "orange_title tdhor")[8] wouldn't exist and cause an index error
     try:
         htmlcursor=data.find_all("td", "orange_title tdhor")[8].parent
         htmlcursor=htmlcursor.next_sibling.next_sibling
         insert_misc=htmlcursor.td.contents
     except IndexError:
         insert_misc=""
+
+    ###############University Data
+    
+    htmlcursor=data.find_all("table", "tdborder")[1].find_all("tr")
+    j=1
+    u=len(data.find_all("table", "tdborder")[1].find_all("tr"))
+    flag=1
+    while(j<u):
+        print("---------------")
+        if(flag):
+            uni_name=htmlcursor[j].a.string
+            uni_status=uni(htmlcursor[j].span.string)
+            uni_text=""
+            try:
+                if htmlcursor[j+1].a is None:
+                    flag=0
+            except IndexError:
+                pass
+        else:
+            uni_text=htmlcursor[j].td.string
+            flag=1
+        j+=1
+        if(flag):    
+            print("uni:",uni_name,",",uni_status,",",uni_text)    
+            with connection.cursor() as cursor:
+                # Create a new record
+                sql = "SELECT `id`, `name` FROM `uni_list` WHERE `name`= %s"
+                cursor.execute(sql, uni_name)
+                result = cursor.fetchone()
+                print(result)
+                if result is None: #To test is sql returned empty rows
+                    with connection.cursor() as cursor:
+                        sql = "INSERT INTO `uni_list` (`name`) VALUES (%s)"
+                        cursor.execute(sql, uni_name)
+                        print(uni_name, "entered")
+                    connection.commit()
+                else: #SQL hasn't returned empty rows so do this:
+                    with connection.cursor() as cursor:
+                        sql = "INSERT INTO `uni_data` (`pro_id`,`uni_id`,`term`,`year`,`status`,`text`) VALUES (%s,%s,%s,%s,%s,%s)"
+                        cursor.execute(sql, (pro_id,result["id"],term,year,uni_status,uni_text))
+                        print(uni_name, "entered")
+                    connection.commit()
+
+        # connection is not autocommit by default. So you must commit to save
+        # your changes.
+        connection.commit()
 
     ###############entering data to database
     with connection.cursor() as cursor:
