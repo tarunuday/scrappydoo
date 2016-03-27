@@ -11,17 +11,14 @@ def printer(string):
 def r(s): #formatting and removing white spaces and line breaks
     return re.sub(('^\s+|\s+$'),'',s)
 def l(s): #getting only digits
-    return re.sub(('\D'),'',s)
-def ym(s): #getting years and months out of string
+    return int(re.sub(('\D'),'',s))
+def ym(s): #getting years and months out of string - used in Experience Section
     a= re.sub((' Years, '),'',s)
     a= re.sub((' Months'),'',a)
     a=int(a)
     if(a<100):
         a=int(a/10)*100+a%10
     return a
-def ins_major(s):
-    if(s=="Mechanical Engineering"):
-        return 5
 def ins_grade(htmlcursor):
     grade=float(r(htmlcursor.find_all("td")[1].string))
     htmlcursor=htmlcursor.next_sibling.next_sibling.next_sibling.next_sibling
@@ -48,7 +45,6 @@ test=soup.find_all("table", "tdborder")[2].find_all("tr")
 print("Connection Established.")
 print("Connecting to database and starting loop.")
 i=2
-info={}
 
 # Connect to the database
 connection = pymysql.connect(host='localhost',
@@ -60,22 +56,18 @@ connection = pymysql.connect(host='localhost',
 
 while(i<5):#len(test)):
 
+    ###############Start page no i
     link='http://edulix.com/unisearch/'
     link+=test[i].a["href"]
     profile = urllib.request.urlopen(link)
     data = BeautifulSoup(profile,'html.parser')
-    
     print("Connected to profile page no. ",i-1,"/3")
-
-    ##############initiating variables
-    flag_spec=f1ag_spec() #if the "specialisation field is left blank, we'll have a mismatch on the row number for all data following term, year"
-    ix=data.find_all("table", "tdborder")[0] #ix is the christened name of the table that holds all relevant info
 
     ###############EXTRACT ID
     insert_extractid=1000000+int(l(test[i].a["href"]))
 
     ###############Section 1 - NAME
-    insert_name=r(ix.find_all("tr")[2].find_all("td")[1].string)
+    insert_name=r(data.find_all("table", "tdborder")[0].find_all("tr")[2].find_all("td")[1].string)
     if(insert_name==""):
         insert_name=r(data.find_all("a", "no_uline")[0].string)
 
@@ -102,35 +94,55 @@ while(i<5):#len(test)):
     insert_college=""
     if(htmlcursor.find_all("td")[0].string=="University/College"):
         insert_college=r(htmlcursor.find_all("td")[1].string)
-        print(insert_college)
         htmlcursor=htmlcursor.next_sibling.next_sibling
         if(htmlcursor.find_all("td")[0].string=="Department"):
             insert_major=r(htmlcursor.find_all("td")[1].string)
             htmlcursor=htmlcursor.next_sibling.next_sibling
-            print(insert_major)
             if(htmlcursor.find_all("td")[0].string=="Grade"):
                 insert_gpa=ins_grade(htmlcursor)
     elif(htmlcursor.find_all("td")[0].string=="Department"):
         insert_major=r(htmlcursor.find_all("td")[1].string)
         htmlcursor=htmlcursor.next_sibling.next_sibling
-        print(insert_major)
         if(htmlcursor.find_all("td")[0].string=="Grade"):
             insert_gpa=ins_grade(htmlcursor)
     elif(htmlcursor.find_all("td")[0].string=="Grade"):
         insert_gpa=ins_grade(htmlcursor)
     
-    #entering data to database
+    ###############Section 4 - experience   
+    htmlcursor=data.find_all("td", "orange_title tdhor")[4].parent
+    htmlcursor=htmlcursor.next_sibling.next_sibling
+    insert_journal=l(htmlcursor.find_all("td")[1].string)
+    htmlcursor=htmlcursor.next_sibling.next_sibling
+    insert_conference=l(htmlcursor.find_all("td")[1].string)
+    htmlcursor=htmlcursor.next_sibling.next_sibling
+    insert_industry=ym(r(htmlcursor.find_all("td")[1].string))
+    htmlcursor=htmlcursor.next_sibling.next_sibling
+    insert_research=ym(r(htmlcursor.find_all("td")[1].string))
+    htmlcursor=htmlcursor.next_sibling.next_sibling
+    insert_internship=ym(r(htmlcursor.find_all("td")[1].string))
+
+    ###############Section 8 - Miscellaneous   
+    #if there is no data entered by a user in their misc section, that section will not be displayed in the profile summary page
+    #that means find_all("td", "orange_title tdhor")[8] wouldn't exist and cause an index error
+    try:
+        htmlcursor=data.find_all("td", "orange_title tdhor")[8].parent
+        htmlcursor=htmlcursor.next_sibling.next_sibling
+        insert_misc=htmlcursor.td.contents
+    except IndexError:
+        insert_misc=""
+
+    ###############entering data to database
     with connection.cursor() as cursor:
         # Create a new record
-        sql = "INSERT INTO `profiles` (`extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship` `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        cursor.execute(sql, (insert_extractid, insert_name, int("0"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, "" ))
+        sql = "INSERT INTO `profiles` (`extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        cursor.execute(sql, (insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, insert_misc))
     # connection is not autocommit by default. So you must commit to save
     # your changes.
     connection.commit()
     try:    
         with connection.cursor() as cursor:
             # Read a single record
-            sql = "SELECT `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `engexam`, `industry`, `research`, `misc` FROM `profiles`"
+            sql = "SELECT `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship` `misc` FROM `profiles`"
             cursor.execute(sql)
             result = cursor.fetchone()
             print(result)
