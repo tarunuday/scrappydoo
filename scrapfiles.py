@@ -36,8 +36,21 @@ def ins_gre(a,b,c):
 def ins_major(s):
     if(s=="Mechanical Engineering"):
         return 5
-
-
+def ins_grade(htmlcursor):
+    grade=float(r(htmlcursor.find_all("td")[1].string))
+    htmlcursor=htmlcursor.next_sibling.next_sibling.next_sibling.next_sibling
+    scale=int(r(htmlcursor.find_all("td")[1].string))
+    if(scale==10): #10grade not percentage
+        grade=(int(grade*100))*10+1
+    elif(scale==100): #percentage
+        grade=(int(grade*100))*10
+    elif(scale==4): #4grade not percentage
+        grade=(int(grade*100))*10+4
+    elif(scale==5): #5grade not percentage
+        grade=(int(grade*100))*10+5
+    elif(scale==8): #8grade not percentage
+        grade=(int(grade*100))*10+8
+    return grade
 urls = 'file:///C:/Users/tarunuday/Documents/scrapdata/mech.html'
 print("Connecting to ",urls)
 htmlfile = urllib.request.urlopen(urls)
@@ -65,33 +78,50 @@ while(i<5):#len(test)):
     
     print("Connected to profile page no. ",i-1,"/3")
 
-    #initiating variables
+    ##############initiating variables
     flag_spec=f1ag_spec() #if the "specialisation field is left blank, we'll have a mismatch on the row number for all data following term, year"
     ix=data.find_all("table", "tdborder")[0] #ix is the christened name of the table that holds all relevant info
 
-    #Fetching headings for better navigation
-    heading={}
-    k=0
-    headings_holder=data.find_all("td", "orange_title tdhor")
-    for k in len(headings_holder):
-        heading[k]=data.find_all("td", "orange_title tdhor")[0].parent
-        k+=1
-
-    #EXTRACT ID
+    ###############EXTRACT ID
     insert_extractid=1000000+int(l(test[i].a["href"]))
 
-    #NAME
+    ###############Section 1 - NAME
     insert_name=r(ix.find_all("tr")[2].find_all("td")[1].string)
     if(insert_name==""):
         insert_name=r(data.find_all("a", "no_uline")[0].string)
-    print(insert_extractid,": ", insert_name)
 
+    ###############Section 2 - Standardized Test Scores
+    htmlcursor=data.find_all("td", "orange_title tdhor")[2].parent
+    htmlcursor=htmlcursor.next_sibling
+    htmlcursor=htmlcursor.next_sibling
+    insidecursor=htmlcursor.td.table
+    print(insidecursor.find_all("tr")[0])
+    
 
-    info["program"]=r(ix.find_all("tr")[4].find_all("td")[1].string)
-    insert_major=ins_major(r(ix.find_all("tr")[5].find_all("td")[1].string))
-    info["specialization"]=r(ix.find_all("tr")[6].find_all("td")[1].string)
-    info["termyear"]=r(ix.find_all("tr")[6+flag_spec].find_all("td")[1].string)
-    print(info)
+    ###############Section 3 - UG Details
+    htmlcursor=data.find_all("td", "orange_title tdhor")[3].parent
+    htmlcursor=htmlcursor.next_sibling
+    htmlcursor=htmlcursor.next_sibling
+    insert_college=""
+    if(htmlcursor.find_all("td")[0].string=="University/College"):
+        insert_college=r(htmlcursor.find_all("td")[1].string)
+        print(insert_college)
+        htmlcursor=htmlcursor.next_sibling.next_sibling
+        if(htmlcursor.find_all("td")[0].string=="Department"):
+            insert_major=r(htmlcursor.find_all("td")[1].string)
+            htmlcursor=htmlcursor.next_sibling.next_sibling
+            print(insert_major)
+            if(htmlcursor.find_all("td")[0].string=="Grade"):
+                insert_gpa=ins_grade(htmlcursor)
+    elif(htmlcursor.find_all("td")[0].string=="Department"):
+        insert_major=r(htmlcursor.find_all("td")[1].string)
+        htmlcursor=htmlcursor.next_sibling.next_sibling
+        print(insert_major)
+        if(htmlcursor.find_all("td")[0].string=="Grade"):
+            insert_gpa=ins_grade(htmlcursor)
+    elif(htmlcursor.find_all("td")[0].string=="Grade"):
+        insert_gpa=ins_grade(htmlcursor)
+
     ins1=int(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[0].find_all("td")[2].string))
     ins2=int(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[0].find_all("td")[4].string))
     ins3=float(r(ix.find_all("tr")[8+flag_spec].find_all("td")[0].find_all("table")[0].find_all("tr")[0].find_all("td")[6].string))
