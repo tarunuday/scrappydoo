@@ -19,6 +19,17 @@ def ym(s): #getting years and months out of string - used in Experience Section
     if(a<100):
         a=int(a/10)*100+a%10
     return a
+def ty(s): #getting term and year details 
+    s=r(s)
+    b=re.sub(('\D'),'',s)
+    a=re.sub(('\d'),'',s)
+    s=re.sub((' - '),'',a)
+    if(s=="Fall"):
+        return int("1"+b)
+    if(s=="Spring"):
+        return ("2"+b)
+    if(s=="Summer"):
+        return ("3"+b)
 def ins_grade(htmlcursor):
     grade=float(r(htmlcursor.find_all("td")[1].string))
     htmlcursor=htmlcursor.next_sibling.next_sibling.next_sibling.next_sibling
@@ -50,6 +61,24 @@ def uni(s):
     else: 
         print("wtf")
         return "wtf"
+def db_uni_list_searchbyname(uni_name):
+    sql = "SELECT * FROM `uni_list` WHERE `name`= %s"
+    cursor.execute(sql, uni_name)
+    return cursor.fetchone()
+    
+def db_profile(extractid):
+    with connection.cursor() as cursor:
+        sql = "SELECT pro_id FROM `profiles` WHERE `extractid`= %s"
+        cursor.execute(sql, extractid)
+        connection.commit()
+    return cursor.fetchone()["pro_id"]
+
+def db_uni_data_enterall(pro_id,uni_id,major,term,year,uni_status,uni_text):
+    with connection.cursor() as cursor:
+        sql = "INSERT INTO `uni_data` (`pro_id`,`uni_id`, `major`, `term`,`year`,`status`,`text`) VALUES (%s,%s,%s,%s,%s,%s,%s)"
+        cursor.execute(sql, (pro_id,uni_id,major,term,year,uni_status,uni_text))
+        print(uni_name, "entered")
+    connection.commit()
 
 
 urls = 'file:///C:/Users/tarunuday/Documents/scrapdata/mech.html'
@@ -60,7 +89,7 @@ soup = BeautifulSoup(htmlfile,'html.parser')
 test=soup.find_all("table", "tdborder")[2].find_all("tr")
 print("Connection established")
 print("Connecting to database...")
-i=2
+i=8
 # Connect to the database
 try:
     connection = pymysql.connect(host='localhost',
@@ -69,25 +98,29 @@ try:
                                  db='playhard',
                                  charset='utf8mb4',
                                  cursorclass=pymysql.cursors.DictCursor)
-    print("Connection to database established")
+    print("Connected to Database. Loop begins")
 
 except pymysql.err.OperationalError:
     print("Access denied for ",user,"@",host)
-
-while(i<3):#len(test)):
+flibbets=1
+while(flibbets):#len(test)):
     ###############Start page no i
     link='http://edulix.com/unisearch/'
     link+=test[i].a["href"]
     profile = urllib.request.urlopen(link)
     data = BeautifulSoup(profile,'html.parser')
-    print("Connected to profile page no. ",i-1,"/3")
+    print("Connected to profile link:",link,i)
 
     ###############EXTRACT ID
     insert_extractid=1000000+int(l(test[i].a["href"]))
 
     ###############Checking for Universities
-    if(not(uni_check)):
+    if(uni_check):
+        print('No Universities to show')
+        i+=1
         continue;
+    else:
+        flibbets=0
 
     ###############Section 0 - NAME
     insert_name=r(data.find_all("table", "tdborder")[0].find_all("tr")[2].find_all("td")[1].string)
@@ -117,7 +150,10 @@ while(i<3):#len(test)):
     htmlcursor=data.find_all("td", "orange_title tdhor")[2].parent
     htmlcursor=htmlcursor.next_sibling.next_sibling
     insidecursor=htmlcursor.td.table.find_all("tr")[0]
-    insert_gre=int(r(insidecursor.find_all("td")[2].string)+r(insidecursor.find_all("td")[4].string)+str(int(float(r(insidecursor.find_all("td")[6].string))*10)))
+    try: 
+        insert_gre=int(r(insidecursor.find_all("td")[2].string)+r(insidecursor.find_all("td")[4].string)+str(int(float(r(insidecursor.find_all("td")[6].string))*10)))
+    except ValueError:
+        insert_gre=0
     insidecursor=insidecursor.next_sibling.next_sibling.next_sibling.next_sibling
     try:
         insert_toefl=int(r(insidecursor.find_all("td")[2].string))
@@ -134,6 +170,8 @@ while(i<3):#len(test)):
     htmlcursor=htmlcursor.next_sibling
     htmlcursor=htmlcursor.next_sibling
     insert_college=""
+    insert_major=""
+    insert_gpa=0
     if(htmlcursor.find_all("td")[0].string=="University/College"):
         insert_college=r(htmlcursor.find_all("td")[1].string)
         htmlcursor=htmlcursor.next_sibling.next_sibling
@@ -174,13 +212,23 @@ while(i<3):#len(test)):
     except IndexError:
         insert_misc=""
 
+    ###############ENTERING PROFILE DATA TO DATABASE
+    with connection.cursor() as cursor:
+        # Create a new record
+        sql = "INSERT INTO `profiles` (`pro_id`, `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        cursor.execute(sql, (NULL, insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, insert_misc))
+    # connection is not autocommit by default. So you must commit to save
+    # your changes.
+    connection.commit()
+
+    pro_id=db_profile(insert_extractid) #### We just got the last piece of the puzzle. the auto-incremented id of the latest entry
+
     ###############University Data
     htmlcursor=data.find_all("table", "tdborder")[1].find_all("tr")
     j=1
     u=len(data.find_all("table", "tdborder")[1].find_all("tr"))
-    flag=1
-    while(j<u):
-        print("---------------")
+    flag=1          ######Flag to chk if we have got the text details about the uni, if any
+    while(j<u):     ######Loop to get all uni info
         if(flag):
             uni_name=htmlcursor[j].a.string
             uni_status=uni(htmlcursor[j].span.string)
@@ -198,9 +246,7 @@ while(i<3):#len(test)):
             print("uni:",uni_name,",",uni_status,",",uni_text)    
             with connection.cursor() as cursor:
                 # Create a new record
-                sql = "SELECT `id`, `name` FROM `uni_list` WHERE `name`= %s"
-                cursor.execute(sql, uni_name)
-                result = cursor.fetchone()
+                result=db_uni_list_searchbyname(uni_name)
                 print(result)
                 if result is None: #To test is sql returned empty rows
                     with connection.cursor() as cursor:
@@ -208,29 +254,16 @@ while(i<3):#len(test)):
                         cursor.execute(sql, uni_name)
                         print(uni_name, "entered")
                     connection.commit()
+                    result=db_uni_list_searchbyname(uni_name)
+                    db_uni_data_enterall(pro_id,result["id"],"1",term,year,uni_status,uni_text)
                 else: #SQL hasn't returned empty rows so do this:
-                    with connection.cursor() as cursor:
-                        sql = "INSERT INTO `uni_data` (`pro_id`,`uni_id`, `major`, `term`,`year`,`status`,`text`) VALUES (%s,%s,%s,%s,%s,%s,%s)"
-                        cursor.execute(sql, (pro_id,result["id"],"1",term,year,uni_status,uni_text))
-                        print(uni_name, "entered")
-                    connection.commit()
+                    db_uni_data_enterall(pro_id,result["id"],"1",term,year,uni_status,uni_text)
+                    
 
-        # connection is not autocommit by default. So you must commit to save
-        # your changes.
-        connection.commit()
-
-    ###############entering data to database
-    with connection.cursor() as cursor:
-        # Create a new record
-        sql = "INSERT INTO `profiles` (`extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        cursor.execute(sql, (insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, insert_misc))
-    # connection is not autocommit by default. So you must commit to save
-    # your changes.
-    connection.commit()
     try:    
         with connection.cursor() as cursor:
             # Read a single record
-            sql = "SELECT `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship` `misc` FROM `profiles`"
+            sql = "SELECT * FROM `profiles`"
             cursor.execute(sql)
             result = cursor.fetchone()
             print(result)
