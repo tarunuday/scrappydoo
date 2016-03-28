@@ -18,7 +18,6 @@ def ym(s): #getting years and months out of string - used in Experience Section
     a=int(a)
     if(a<100):
         a=int(a/10)*100+a%10
-<<<<<<< HEAD
     return str(a)
 def ty(s): #getting term and year details 
     s=r(s)
@@ -27,13 +26,13 @@ def ty(s): #getting term and year details
     s=re.sub((' - '),'',a)
     if(s=="Fall"):
         return int("1"+b)
-    if(s=="Spring"):
+    elif(s=="Spring"):
         return ("2"+b)
-    if(s=="Summer"):
+    elif(s=="Summer"):
         return ("3"+b)
-=======
-    return a
->>>>>>> parent of 1d32e7e... No Universities found
+    else:
+        return ("0"+b)
+
 def ins_grade(htmlcursor):
     grade=float(r(htmlcursor.find_all("td")[1].string))
     htmlcursor=htmlcursor.next_sibling.next_sibling.next_sibling.next_sibling
@@ -66,7 +65,6 @@ def uni(s):
     else: 
         print("wtf")
         return "wtf"
-<<<<<<< HEAD
 def db_uni_list_searchbyname(uni_name):
     with connection.cursor() as cursor:
         sql = "SELECT * FROM `uni_list` WHERE `name`= %s"
@@ -87,9 +85,6 @@ def db_uni_data_enterall(pro_id,uni_id,major,term,year,uni_status,uni_text):
         cursor.execute(sql, (pro_id,uni_id,major,term,year,uni_status,uni_text))
         print(uni_name, "entered")
     connection.commit()
-=======
->>>>>>> parent of 1d32e7e... No Universities found
-
 
 urls = 'file:///C:/Users/tarunuday/Documents/scrapdata/mech.html'
 print("Connecting to ",urls)
@@ -99,11 +94,7 @@ soup = BeautifulSoup(htmlfile,'html.parser')
 test=soup.find_all("table", "tdborder")[2].find_all("tr")
 print("Connection established")
 print("Connecting to database...")
-<<<<<<< HEAD
 i=94
-=======
-i=2
->>>>>>> parent of 1d32e7e... No Universities found
 # Connect to the database
 try:
     connection = pymysql.connect(host='localhost',
@@ -116,13 +107,8 @@ try:
 
 except pymysql.err.OperationalError:
     print("Access denied for ",user,"@",host)
-<<<<<<< HEAD
 flibbets=1
 while(flibbets):
-=======
-
-while(i<3):#len(test)):
->>>>>>> parent of 1d32e7e... No Universities found
     ###############Start page no i
     link='http://edulix.com/unisearch/'
     link+=test[i].a["href"]
@@ -134,13 +120,9 @@ while(i<3):#len(test)):
     insert_extractid=1000000+int(l(test[i].a["href"]))
 
     ###############Checking for Universities
-<<<<<<< HEAD
     if(not(uni_check(data))):
         print('No Universities to show')
         i+=1
-=======
-    if(not(uni_check)):
->>>>>>> parent of 1d32e7e... No Universities found
         continue;
 
     ###############Section 0 - NAME
@@ -171,14 +153,10 @@ while(i<3):#len(test)):
     htmlcursor=data.find_all("td", "orange_title tdhor")[2].parent
     htmlcursor=htmlcursor.next_sibling.next_sibling
     insidecursor=htmlcursor.td.table.find_all("tr")[0]
-<<<<<<< HEAD
     try: 
         insert_gre=int(r(insidecursor.find_all("td")[2].string)+r(insidecursor.find_all("td")[4].string)+str(int(float(r(insidecursor.find_all("td")[6].string))*10)))
     except ValueError:
         insert_gre="0"
-=======
-    insert_gre=int(r(insidecursor.find_all("td")[2].string)+r(insidecursor.find_all("td")[4].string)+str(int(float(r(insidecursor.find_all("td")[6].string))*10)))
->>>>>>> parent of 1d32e7e... No Universities found
     insidecursor=insidecursor.next_sibling.next_sibling.next_sibling.next_sibling
     try:
         insert_toefl=int(r(insidecursor.find_all("td")[2].string))
@@ -195,7 +173,6 @@ while(i<3):#len(test)):
     htmlcursor=htmlcursor.next_sibling
     htmlcursor=htmlcursor.next_sibling
     insert_college=""
-<<<<<<< HEAD
     insert_major=""
     insert_gpa="0"
     try:
@@ -208,12 +185,6 @@ while(i<3):#len(test)):
                 if(htmlcursor.find_all("td")[0].string=="Grade"):
                     insert_gpa=ins_grade(htmlcursor)
         elif(htmlcursor.find_all("td")[0].string=="Department"):
-=======
-    if(htmlcursor.find_all("td")[0].string=="University/College"):
-        insert_college=r(htmlcursor.find_all("td")[1].string)
-        htmlcursor=htmlcursor.next_sibling.next_sibling
-        if(htmlcursor.find_all("td")[0].string=="Department"):
->>>>>>> parent of 1d32e7e... No Universities found
             insert_major=r(htmlcursor.find_all("td")[1].string)
             htmlcursor=htmlcursor.next_sibling.next_sibling
             if(htmlcursor.find_all("td")[0].string=="Grade"):
@@ -247,7 +218,6 @@ while(i<3):#len(test)):
         insert_misc=htmlcursor.td.contents
     except IndexError:
         insert_misc=""
-<<<<<<< HEAD
     print(insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, insert_misc)
     ###############ENTERING PROFILE DATA TO DATABASE
     with connection.cursor() as cursor:
@@ -276,22 +246,12 @@ while(i<3):#len(test)):
 
     pro_id=db_profile(insert_extractid) #### We just got the last piece of the puzzle. the auto-incremented id of the latest entry
     print("Data for ",pro_id,"entered")
-=======
->>>>>>> parent of 1d32e7e... No Universities found
-
     ###############University Data
     htmlcursor=data.find_all("table", "tdborder")[1].find_all("tr")
     j=1
-<<<<<<< HEAD
     u=uni_check(data)
     flag=1          ######Flag to chk if we have got the text details about the uni, if any
     while(j<u):     ######Loop to get all uni info
-=======
-    u=len(data.find_all("table", "tdborder")[1].find_all("tr"))
-    flag=1
-    while(j<u):
-        print("---------------")
->>>>>>> parent of 1d32e7e... No Universities found
         if(flag):
             uni_name=htmlcursor[j].a.string
             uni_status=uni(htmlcursor[j].span.string)
@@ -325,11 +285,9 @@ while(i<3):#len(test)):
                         cursor.execute(sql, (pro_id,result["id"],"1",term,year,uni_status,uni_text))
                         print(uni_name, "entered")
                     connection.commit()
-
         # connection is not autocommit by default. So you must commit to save
         # your changes.
         connection.commit()
-
     ###############entering data to database
     with connection.cursor() as cursor:
         # Create a new record
