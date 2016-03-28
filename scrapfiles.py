@@ -74,7 +74,7 @@ try:
 except pymysql.err.OperationalError:
     print("Access denied for ",user,"@",host)
 
-while(i<5):#len(test)):
+while(i<3):#len(test)):
     ###############Start page no i
     link='http://edulix.com/unisearch/'
     link+=test[i].a["href"]
@@ -95,7 +95,23 @@ while(i<5):#len(test)):
         insert_name=r(data.find_all("a", "no_uline")[0].string)
 
     ###############Section 1 - App Details
-
+    htmlcursor=data.find_all("td", "orange_title tdhor")[1].parent
+    while(True):
+        htmlcursor=htmlcursor.next_sibling.next_sibling
+        if(htmlcursor.td.string=="Standardized Test Scores"):
+            break
+        else:
+            if(htmlcursor.td.string=="University (will be) Attending"):
+                attend=htmlcursor.find_all("td")[1].string
+            if(htmlcursor.td.string=="Program"):
+                program=htmlcursor.find_all("td")[1].string
+            if(htmlcursor.td.string=="Major"):
+                major=htmlcursor.find_all("td")[1].string
+            if(htmlcursor.td.string=="Specialization"):
+                special=htmlcursor.find_all("td")[1].string
+            if(htmlcursor.td.string=="Term and Year"):
+                year=(ty(htmlcursor.find_all("td")[1].string))%10000
+                term=int(ty(htmlcursor.find_all("td")[1].string)/10000)
 
     ###############Section 2 - Standardized Test Scores
     htmlcursor=data.find_all("td", "orange_title tdhor")[2].parent
@@ -159,7 +175,6 @@ while(i<5):#len(test)):
         insert_misc=""
 
     ###############University Data
-    
     htmlcursor=data.find_all("table", "tdborder")[1].find_all("tr")
     j=1
     u=len(data.find_all("table", "tdborder")[1].find_all("tr"))
@@ -195,8 +210,8 @@ while(i<5):#len(test)):
                     connection.commit()
                 else: #SQL hasn't returned empty rows so do this:
                     with connection.cursor() as cursor:
-                        sql = "INSERT INTO `uni_data` (`pro_id`,`uni_id`,`term`,`year`,`status`,`text`) VALUES (%s,%s,%s,%s,%s,%s)"
-                        cursor.execute(sql, (pro_id,result["id"],term,year,uni_status,uni_text))
+                        sql = "INSERT INTO `uni_data` (`pro_id`,`uni_id`, `major`, `term`,`year`,`status`,`text`) VALUES (%s,%s,%s,%s,%s,%s,%s)"
+                        cursor.execute(sql, (pro_id,result["id"],"1",term,year,uni_status,uni_text))
                         print(uni_name, "entered")
                     connection.commit()
 
