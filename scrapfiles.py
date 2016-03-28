@@ -18,7 +18,7 @@ def ym(s): #getting years and months out of string - used in Experience Section
     a=int(a)
     if(a<100):
         a=int(a/10)*100+a%10
-    return a
+    return str(a)
 def ty(s): #getting term and year details 
     s=r(s)
     b=re.sub(('\D'),'',s)
@@ -45,11 +45,12 @@ def ins_grade(htmlcursor):
     elif(scale==8): #8grade not percentage
         grade=(int(grade*100))*10+8
     return grade
-def uni_check():
-    if(r(htmlcursor[1].td.string))=="University details not updated":
+def uni_check(soup):
+    yay=r(soup.find_all("table", "tdborder")[1].find_all("tr")[1].td.string)
+    if(yay)=="University details not updated":
         return 0    
     else:
-        return len(data.find_all("table", "tdborder")[1].find_all("tr"))
+        return len(soup.find_all("table", "tdborder")[1].find_all("tr"))
 def uni(s):
     s=r(s)
     if(s=="Result not available"):
@@ -62,8 +63,10 @@ def uni(s):
         print("wtf")
         return "wtf"
 def db_uni_list_searchbyname(uni_name):
-    sql = "SELECT * FROM `uni_list` WHERE `name`= %s"
-    cursor.execute(sql, uni_name)
+    with connection.cursor() as cursor:
+        sql = "SELECT * FROM `uni_list` WHERE `name`= %s"
+        cursor.execute(sql, uni_name)
+        connection.commit()
     return cursor.fetchone()
     
 def db_profile(extractid):
@@ -89,7 +92,7 @@ soup = BeautifulSoup(htmlfile,'html.parser')
 test=soup.find_all("table", "tdborder")[2].find_all("tr")
 print("Connection established")
 print("Connecting to database...")
-i=8
+i=94
 # Connect to the database
 try:
     connection = pymysql.connect(host='localhost',
@@ -103,7 +106,7 @@ try:
 except pymysql.err.OperationalError:
     print("Access denied for ",user,"@",host)
 flibbets=1
-while(flibbets):#len(test)):
+while(flibbets):
     ###############Start page no i
     link='http://edulix.com/unisearch/'
     link+=test[i].a["href"]
@@ -115,7 +118,7 @@ while(flibbets):#len(test)):
     insert_extractid=1000000+int(l(test[i].a["href"]))
 
     ###############Checking for Universities
-    if(uni_check):
+    if(not(uni_check(data))):
         print('No Universities to show')
         i+=1
         continue;
@@ -153,17 +156,17 @@ while(flibbets):#len(test)):
     try: 
         insert_gre=int(r(insidecursor.find_all("td")[2].string)+r(insidecursor.find_all("td")[4].string)+str(int(float(r(insidecursor.find_all("td")[6].string))*10)))
     except ValueError:
-        insert_gre=0
+        insert_gre="0"
     insidecursor=insidecursor.next_sibling.next_sibling.next_sibling.next_sibling
     try:
         insert_toefl=int(r(insidecursor.find_all("td")[2].string))
     except ValueError:
-        insert_toefl=0
+        insert_toefl="0"
     insidecursor=insidecursor.next_sibling.next_sibling
     try:
         insert_ielts=int(r(insidecursor.find_all("td")[2].string))
     except ValueError:
-        insert_ielts=0
+        insert_ielts="0"
     
     ###############Section 3 - UG Details
     htmlcursor=data.find_all("td", "orange_title tdhor")[3].parent
@@ -171,22 +174,26 @@ while(flibbets):#len(test)):
     htmlcursor=htmlcursor.next_sibling
     insert_college=""
     insert_major=""
-    insert_gpa=0
-    if(htmlcursor.find_all("td")[0].string=="University/College"):
-        insert_college=r(htmlcursor.find_all("td")[1].string)
-        htmlcursor=htmlcursor.next_sibling.next_sibling
-        if(htmlcursor.find_all("td")[0].string=="Department"):
+    insert_gpa="0"
+    try:
+        if(htmlcursor.find_all("td")[0].string=="University/College"):
+            insert_college=r(htmlcursor.find_all("td")[1].string)
+            htmlcursor=htmlcursor.next_sibling.next_sibling
+            if(htmlcursor.find_all("td")[0].string=="Department"):
+                insert_major=r(htmlcursor.find_all("td")[1].string)
+                htmlcursor=htmlcursor.next_sibling.next_sibling
+                if(htmlcursor.find_all("td")[0].string=="Grade"):
+                    insert_gpa=ins_grade(htmlcursor)
+        elif(htmlcursor.find_all("td")[0].string=="Department"):
             insert_major=r(htmlcursor.find_all("td")[1].string)
             htmlcursor=htmlcursor.next_sibling.next_sibling
             if(htmlcursor.find_all("td")[0].string=="Grade"):
                 insert_gpa=ins_grade(htmlcursor)
-    elif(htmlcursor.find_all("td")[0].string=="Department"):
-        insert_major=r(htmlcursor.find_all("td")[1].string)
-        htmlcursor=htmlcursor.next_sibling.next_sibling
-        if(htmlcursor.find_all("td")[0].string=="Grade"):
+        elif(htmlcursor.find_all("td")[0].string=="Grade"):
             insert_gpa=ins_grade(htmlcursor)
-    elif(htmlcursor.find_all("td")[0].string=="Grade"):
-        insert_gpa=ins_grade(htmlcursor)
+    except AttributeError:
+        pass #this happens when there are no undergrad details given
+
     
     ###############Section 4 - experience
     ######## ym returns values in ymm format   
@@ -211,22 +218,39 @@ while(flibbets):#len(test)):
         insert_misc=htmlcursor.td.contents
     except IndexError:
         insert_misc=""
-
+    print(insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, insert_misc)
     ###############ENTERING PROFILE DATA TO DATABASE
     with connection.cursor() as cursor:
         # Create a new record
         sql = "INSERT INTO `profiles` (`pro_id`, `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        cursor.execute(sql, (NULL, insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, insert_misc))
+        cursor.execute(sql, (None,
+                             insert_extractid, 
+                             insert_name, 
+                             int("1"), 
+                             insert_college, 
+                             insert_major, 
+                             insert_gpa, 
+                             insert_gre, 
+                             insert_toefl, 
+                             insert_ielts, 
+                             insert_journal, 
+                             insert_conference, 
+                             insert_industry, 
+                             insert_research, 
+                             insert_internship, 
+                             insert_misc))
+
     # connection is not autocommit by default. So you must commit to save
     # your changes.
     connection.commit()
 
     pro_id=db_profile(insert_extractid) #### We just got the last piece of the puzzle. the auto-incremented id of the latest entry
+    print("Data for ",pro_id,"entered")
 
     ###############University Data
     htmlcursor=data.find_all("table", "tdborder")[1].find_all("tr")
     j=1
-    u=len(data.find_all("table", "tdborder")[1].find_all("tr"))
+    u=uni_check(data)
     flag=1          ######Flag to chk if we have got the text details about the uni, if any
     while(j<u):     ######Loop to get all uni info
         if(flag):
