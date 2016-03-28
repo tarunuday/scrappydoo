@@ -91,7 +91,7 @@ soup = BeautifulSoup(htmlfile,'html.parser')
 test=soup.find_all("table", "tdborder")[2].find_all("tr")
 print("Connection established")
 print("Connecting to database...")
-i=56
+i=2
 # Connect to the database
 try:
     connection = pymysql.connect(host='localhost',
@@ -104,8 +104,8 @@ try:
 
 except pymysql.err.OperationalError:
     print("Access denied for ",user,"@",host)
-flibbets=1
-while(flibbets):#len(test)):
+
+while(i<100):#len(test)):
     ###############Start page no i
     link='http://edulix.com/unisearch/'
     link+=test[i].a["href"]
@@ -121,9 +121,7 @@ while(flibbets):#len(test)):
     if(not(uni_check(data))):
         print('No Universities to show')
         i+=1
-        continue;
-    else:
-        flibbets=0
+        continue
 
     ###############Section 0 - NAME
     insert_name=r(data.find_all("table", "tdborder")[0].find_all("tr")[2].find_all("td")[1].string)
@@ -175,21 +173,24 @@ while(flibbets):#len(test)):
     insert_college=""
     insert_major=""
     insert_gpa=0
-    if(htmlcursor.find_all("td")[0].string=="University/College"):
-        insert_college=r(htmlcursor.find_all("td")[1].string)
-        htmlcursor=htmlcursor.next_sibling.next_sibling
-        if(htmlcursor.find_all("td")[0].string=="Department"):
+    try:
+        if(htmlcursor.find_all("td")[0].string=="University/College"):
+            insert_college=r(htmlcursor.find_all("td")[1].string)
+            htmlcursor=htmlcursor.next_sibling.next_sibling
+            if(htmlcursor.find_all("td")[0].string=="Department"):
+                insert_major=r(htmlcursor.find_all("td")[1].string)
+                htmlcursor=htmlcursor.next_sibling.next_sibling
+                if(htmlcursor.find_all("td")[0].string=="Grade"):
+                    insert_gpa=ins_grade(htmlcursor)
+        elif(htmlcursor.find_all("td")[0].string=="Department"):
             insert_major=r(htmlcursor.find_all("td")[1].string)
             htmlcursor=htmlcursor.next_sibling.next_sibling
             if(htmlcursor.find_all("td")[0].string=="Grade"):
                 insert_gpa=ins_grade(htmlcursor)
-    elif(htmlcursor.find_all("td")[0].string=="Department"):
-        insert_major=r(htmlcursor.find_all("td")[1].string)
-        htmlcursor=htmlcursor.next_sibling.next_sibling
-        if(htmlcursor.find_all("td")[0].string=="Grade"):
+        elif(htmlcursor.find_all("td")[0].string=="Grade"):
             insert_gpa=ins_grade(htmlcursor)
-    elif(htmlcursor.find_all("td")[0].string=="Grade"):
-        insert_gpa=ins_grade(htmlcursor)
+    except AttributeError:
+        pass #this happens when there are no undergrad details given
     
     ###############Section 4 - experience
     ######## ym returns values in ymm format   
@@ -249,8 +250,6 @@ while(flibbets):#len(test)):
         if(flag):    
             with connection.cursor() as cursor:
                 # Create a new record
-                result=db_uni_list_searchbyname(uni_name)
-                print(result)
                 if result is None: #To test is sql returned empty rows
                     with connection.cursor() as cursor:
                         sql = "INSERT INTO `uni_list` (`name`) VALUES (%s)"
@@ -262,5 +261,5 @@ while(flibbets):#len(test)):
                 else: #SQL hasn't returned empty rows so do this:
                     db_uni_data_enterall(pro_id,result["uni_id"],"1",term,year,uni_status,uni_text)
             print(pro_id,uni_name,",",uni_status,uni_text)    
-        print("end well")
+    print("end well")
 connection.close()
