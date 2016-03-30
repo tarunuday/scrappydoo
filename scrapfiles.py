@@ -26,10 +26,24 @@ def ty(s): #getting term and year details
     s=re.sub((' - '),'',a)
     if(s=="Fall"):
         return int("1"+b)
-    if(s=="Spring"):
-        return ("2"+b)
-    if(s=="Summer"):
-        return ("3"+b)
+    elif(s=="Spring"):
+        return int("2"+b)
+    elif(s=="Summer"):
+        return int("3"+b)
+    else:
+        return int("0"+b)
+def p(s):
+    if(s=="MS"):
+        return int("1")
+    elif(s=="PhD"):
+        return int("2")
+    elif(s=="MS/PhD"):
+        return int("2")
+    elif(s=="Both MS and PhD"):
+        return int("2")
+    else:
+        return "0"
+
 def ins_grade(htmlcursor):
     grade=float(r(htmlcursor.find_all("td")[1].string))
     htmlcursor=htmlcursor.next_sibling.next_sibling.next_sibling.next_sibling
@@ -75,11 +89,10 @@ def db_profile(extractid):
         res=cursor.fetchone()["pro_id"]
     return res
 
-def db_uni_data_enterall(pro_id,uni_id,major,term,year,uni_status,uni_text):
+def db_uni_data_enterall(pro_id,uni_id,program,major,term,year,uni_status,attend_status,uni_text):
     with connection.cursor() as cursor:
-        sql = "INSERT INTO `uni_data` (`pro_id`,`uni_id`,`program`, `major`, `term`,`year`,`status`,`text`) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
-        cursor.execute(sql, (pro_id,uni_id,program,major,term,year,uni_status,uni_text))
-        print(uni_name, "entered")
+        sql = "INSERT INTO `uni_data` (`pro_id`,`uni_id`,`program`, `major`, `term`,`year`,`status`,`attend`,`text`) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+        cursor.execute(sql, (pro_id, uni_id, program, major, term, year, uni_status, attend_status, uni_text))
     connection.commit()
 
 
@@ -91,7 +104,7 @@ soup = BeautifulSoup(htmlfile,'html.parser')
 test=soup.find_all("table", "tdborder")[2].find_all("tr")
 print("Connection established")
 print("Connecting to database...")
-i=2
+i=37
 # Connect to the database
 try:
     connection = pymysql.connect(host='localhost',
@@ -103,9 +116,10 @@ try:
     print("Connected to Database. Loop begins")
 
 except pymysql.err.OperationalError:
-    print("Access denied for ",user,"@",host)
+    print("Access denied")
+    i=9999999999
 
-while(i<100):#len(test)):
+while(i<100):
     ###############Start page no i
     link='http://edulix.com/unisearch/'
     link+=test[i].a["href"]
@@ -129,6 +143,12 @@ while(i<100):#len(test)):
         insert_name=r(data.find_all("a", "no_uline")[0].string)
 
     ###############Section 1 - App Details
+    attend=""
+    program=""
+    major=""
+    special=""
+    year=0
+    term=0
     htmlcursor=data.find_all("td", "orange_title tdhor")[1].parent
     while(True):
         htmlcursor=htmlcursor.next_sibling.next_sibling
@@ -136,13 +156,13 @@ while(i<100):#len(test)):
             break
         else:
             if(htmlcursor.td.string=="University (will be) Attending"):
-                attend=htmlcursor.find_all("td")[1].string
+                attend=r(htmlcursor.find_all("td")[1].a.string)
             if(htmlcursor.td.string=="Program"):
-                program=htmlcursor.find_all("td")[1].string
+                program=p(r(htmlcursor.find_all("td")[1].string))
             if(htmlcursor.td.string=="Major"):
-                major=htmlcursor.find_all("td")[1].string
+                major=r(htmlcursor.find_all("td")[1].string)
             if(htmlcursor.td.string=="Specialization"):
-                special=htmlcursor.find_all("td")[1].string
+                special=r(htmlcursor.find_all("td")[1].string)
             if(htmlcursor.td.string=="Term and Year"):
                 year=(ty(htmlcursor.find_all("td")[1].string))%10000
                 term=int(ty(htmlcursor.find_all("td")[1].string)/10000)
@@ -212,15 +232,16 @@ while(i<100):#len(test)):
     try:
         htmlcursor=data.find_all("td", "orange_title tdhor")[8].parent
         htmlcursor=htmlcursor.next_sibling.next_sibling
-        insert_misc=htmlcursor.td.contents
+        insert_misc=r(htmlcursor.td.contents[0])       #This got me stuck for a couple of days. .contents gives output as a list
     except IndexError:
         insert_misc=""
+    
 
     ###############ENTERING PROFILE DATA TO DATABASE
     with connection.cursor() as cursor:
         # Create a new record
         sql = "INSERT INTO `profiles` (`pro_id`, `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        cursor.execute(sql, (None, insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, insert_misc))
+        cursor.execute(sql, [None, insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, insert_misc])
     # connection is not autocommit by default. So you must commit to save
     # your changes.
     connection.commit()
@@ -234,8 +255,11 @@ while(i<100):#len(test)):
     u=len(data.find_all("table", "tdborder")[1].find_all("tr"))
     flag=1          ######Flag to chk if we have got the text details about the uni, if any
     while(j<u):     ######Loop to get all uni info
+        attend_status=0
         if(flag):
             uni_name=htmlcursor[j].a.string
+            if(uni_name==attend):
+                attend_status=1
             uni_status=uni(htmlcursor[j].span.string)
             uni_text=""
             try:
@@ -250,16 +274,19 @@ while(i<100):#len(test)):
         if(flag):    
             with connection.cursor() as cursor:
                 # Create a new record
+                result=db_uni_list_searchbyname(uni_name)
                 if result is None: #To test is sql returned empty rows
                     with connection.cursor() as cursor:
                         sql = "INSERT INTO `uni_list` (`name`) VALUES (%s)"
                         cursor.execute(sql, uni_name)
                     connection.commit()
-                    print(uni_name, "entered to List of Unis")
+                    print("INSERTED ",uni_name, "TO LIST OF UNIVERSITIES")
                     result=db_uni_list_searchbyname(uni_name)
-                    db_uni_data_enterall(pro_id,result["uni_id"],"1",term,year,uni_status,uni_text)
+                    db_uni_data_enterall(pro_id, result["uni_id"], int(program), major, int(term), (year), int(uni_status), attend_status, uni_text)
                 else: #SQL hasn't returned empty rows so do this:
-                    db_uni_data_enterall(pro_id,result["uni_id"],"1",term,year,uni_status,uni_text)
-            print(pro_id,uni_name,",",uni_status,uni_text)    
+                    print(pro_id,result["uni_id"],program,major,term,year,uni_status,attend_status,uni_text)
+                    db_uni_data_enterall(pro_id, result["uni_id"], int(program), major, int(term), (year), int(uni_status), attend_status, uni_text)
+            print("INSERTED: ",uni_name,",",uni_status,attend_status,uni_text)    
+    i+=1
     print("end well")
 connection.close()
