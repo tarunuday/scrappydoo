@@ -226,6 +226,7 @@ while(i<100):
     htmlcursor=htmlcursor.next_sibling.next_sibling
     insert_internship=ym(r(htmlcursor.find_all("td")[1].string))
 
+    international=1
     ###############Section 8 - Miscellaneous   
     ########if there is no data entered by a user in their misc section, that section will not be displayed in the profile summary page
     ########that means find_all("td", "orange_title tdhor")[8] wouldn't exist and cause an index error
@@ -240,8 +241,8 @@ while(i<100):
     ###############ENTERING PROFILE DATA TO DATABASE
     with connection.cursor() as cursor:
         # Create a new record
-        sql = "INSERT INTO `profiles` (`pro_id`, `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        cursor.execute(sql, [None, insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, insert_misc])
+        sql = "INSERT INTO `profiles` (`pro_id`, `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship`, `international`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        cursor.execute(sql, [None, insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, `international`, insert_misc])
     # connection is not autocommit by default. So you must commit to save
     # your changes.
     connection.commit()
