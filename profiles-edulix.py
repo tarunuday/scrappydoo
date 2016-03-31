@@ -8,18 +8,30 @@ def printer(string):
     string=datetime.datetime.now()+": "+string
     with open("error.log", "a") as myfile:
         myfile.write(string,"\n")
-def r(s): #formatting and removing white spaces and line breaks
+def r(s):
+    """
+    formatting and removing white spaces and line breaks
+    """
     return re.sub(('^\s+|\s+$'),'',s)
-def l(s): #getting only digits
+def l(s): 
+    """ 
+    getting only digits
+    """
     return int(re.sub(('\D'),'',s))
-def ym(s): #getting years and months out of string - used in Experience Section
+def ym(s): 
+    """
+    getting years and months out of string - used in Experience Section
+    """
     a= re.sub((' Years, '),'',s)
     a= re.sub((' Months'),'',a)
     a=int(a)
     if(a<100):
         a=int(a/10)*100+a%10
     return a
-def ty(s): #getting term and year details 
+def ty(s): 
+    """
+    getting term and year details 
+    """
     s=r(s)
     b=re.sub(('\D'),'',s)
     a=re.sub(('\d'),'',s)
@@ -33,6 +45,9 @@ def ty(s): #getting term and year details
     else:
         return int("0"+b)
 def p(s):
+    """
+    getting program details
+    """
     if(s=="MS"):
         return int("1")
     elif(s=="PhD"):
@@ -44,10 +59,13 @@ def p(s):
     else:
         return "0"
 
-def ins_grade(htmlcursor):
-    grade=float(r(htmlcursor.find_all("td")[1].string))
-    htmlcursor=htmlcursor.next_sibling.next_sibling.next_sibling.next_sibling
-    scale=int(r(htmlcursor.find_all("td")[1].string))
+def ins_grade(cursor):
+    """
+    getting grade details
+    """
+    grade=float(r(cursor.find_all("td")[1].string))
+    cursor=cursor.next_sibling.next_sibling.next_sibling.next_sibling
+    scale=int(r(cursor.find_all("td")[1].string))
     if(scale==10): #10grade not percentage
         grade=(int(grade*100))*10+1
     elif(scale==100): #percentage
@@ -59,6 +77,7 @@ def ins_grade(htmlcursor):
     elif(scale==8): #8grade not percentage
         grade=(int(grade*100))*10+8
     return grade
+
 def uni_check(string):
     if(r(string.find_all("table", "tdborder")[1].find_all("tr")[1].td.string))=="University details not updated":
         return 0    
@@ -75,6 +94,7 @@ def uni(s):
     else: 
         print("wtf")
         return "wtf"
+        
 def db_uni_list_searchbyname(uni_name):
     with connection.cursor() as cursor:
         sql = "SELECT * FROM `uni_list` WHERE `name`= %s"
