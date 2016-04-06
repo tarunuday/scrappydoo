@@ -118,7 +118,6 @@ response = opener.open(url)
 soup = BeautifulSoup(response,'html.parser')
 print("Connected")
 print("Connecting to database...")
-i=0
 # Connect to the database
 try:
     connection = pymysql.connect(host='localhost',
@@ -128,24 +127,41 @@ try:
                                  charset='utf8mb4',
                                  cursorclass=pymysql.cursors.DictCursor)
     print("Connected to Database. Loop begins")
-
+    i=85
 except pymysql.err.OperationalError:
     print("Access denied")
     i=9999999999
-
 htmlcursor=soup.find_all(id="university-reviews")[0].find_all("li")
-
-for college in htmlcursor:
+#for x in htmlcursor:
     ###############Start page no i
-    link=college.a["href"]
-    name=college.a.string
+while(i<100):
+    try:
+        link="http://www.stupidsid.com"+htmlcursor[i].a["href"]
+        name=htmlcursor[i].a.string
+        
+        response1 = opener.open(link)
+        data = BeautifulSoup(response1,'html.parser')
+        programs=data.section.ul.find_all("li")
+        for program in programs:
+            prog=program.string
+            if prog is None:
+                continue
+            else:
+                print("---",r(prog))
+    except AttributeError:
+        i+=1
+        continue
+    except OSError:
+        print("-")
+        link=htmlcursor[i].a["href"]
+        name=htmlcursor[i].a.string
+        
+        response1 = opener.open(link)
+        data = BeautifulSoup(response1,'html.parser')
+        programs=data.section.ul.find_all("li")
+        for program in programs:
+            print("---",program.string)
     print(i+1,".",name,":",)
-
-    response1 = opener.open(link)
-    data = BeautifulSoup(response1,'html.parser')
-    programs=data.section.ul,find_all("li")
-    for program in programs:
-        print("---",program.string)
     i+=1
 #    profile = urllib.request.urlopen(link)
 #    data = BeautifulSoup(profile,'html.parser')

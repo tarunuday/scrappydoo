@@ -211,19 +211,18 @@ while(i<100):
     htmlcursor=htmlcursor.next_sibling
     htmlcursor=htmlcursor.next_sibling
     insert_college=""
-    insert_major=""
     insert_gpa=0
     try:
         if(htmlcursor.find_all("td")[0].string=="University/College"):
             insert_college=r(htmlcursor.find_all("td")[1].string)
             htmlcursor=htmlcursor.next_sibling.next_sibling
             if(htmlcursor.find_all("td")[0].string=="Department"):
-                insert_major=r(htmlcursor.find_all("td")[1].string)
+                #old_major=r(htmlcursor.find_all("td")[1].string)
                 htmlcursor=htmlcursor.next_sibling.next_sibling
                 if(htmlcursor.find_all("td")[0].string=="Grade"):
                     insert_gpa=ins_grade(htmlcursor)
         elif(htmlcursor.find_all("td")[0].string=="Department"):
-            insert_major=r(htmlcursor.find_all("td")[1].string)
+            #old_major=r(htmlcursor.find_all("td")[1].string)
             htmlcursor=htmlcursor.next_sibling.next_sibling
             if(htmlcursor.find_all("td")[0].string=="Grade"):
                 insert_gpa=ins_grade(htmlcursor)
@@ -261,8 +260,8 @@ while(i<100):
     ###############ENTERING PROFILE DATA TO DATABASE
     with connection.cursor() as cursor:
         # Create a new record
-        sql = "INSERT INTO `profiles` (`pro_id`, `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship`, `international`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        cursor.execute(sql, [None, insert_extractid, insert_name, int("1"), insert_college, insert_major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, `international`, insert_misc])
+        sql = "INSERT INTO `profiles` (`pro_id`, `extractid`, `name`, `current`, `college`, `major`, `gpa`, `gre`, `toefl`, `ielts`, `journal`, `conference`, `industry`, `research`, `internship`, `international`, `misc`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        cursor.execute(sql, (None, insert_extractid, insert_name, int("1"), insert_college, major, insert_gpa, insert_gre, insert_toefl, insert_ielts, insert_journal, insert_conference, insert_industry, insert_research, insert_internship, international, insert_misc))
     # connection is not autocommit by default. So you must commit to save
     # your changes.
     connection.commit()
