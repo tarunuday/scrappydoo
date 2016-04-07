@@ -135,11 +135,9 @@ def db_uni_data_enterall(pro_id,uni_id,program,major,term,year,uni_status,attend
         cursor.execute(sql, (pro_id, uni_id, program, major, term, year, uni_status, attend_status, uni_text))
     connection.commit()
 
-#Initialise
-i=4242
-net=0
-network_issues=0
-
+##################################################Initialise
+i=4242                                              
+##################################################Initialise
 
 # Connect to the database
 msglog("Connecting to database...")
