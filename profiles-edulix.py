@@ -5,6 +5,9 @@ import pymysql.cursors
 import datetime
 
 def errormsg(errid,errstring):
+    if(errid==1):
+        if i is not None:
+            errstring=errstring+" for id: "+str(i)
     try:
         with connection.cursor() as cursor:
             sql = "INSERT INTO `errormsg` (`type`,`msg`) VALUES (%s,%s)"
@@ -133,7 +136,7 @@ def db_uni_data_enterall(pro_id,uni_id,program,major,term,year,uni_status,attend
     connection.commit()
 
 #Initialise
-i=64
+i=4242
 net=0
 network_issues=0
 
@@ -144,7 +147,7 @@ try:
     connection = pymysql.connect(host='localhost',
                                  user='root',
                                  password='secret',
-                                 db='playhard',
+                                 db='workhard',
                                  charset='utf8mb4',
                                  cursorclass=pymysql.cursors.DictCursor)
     msglog("Connected to Database. Loop begins")
@@ -168,7 +171,6 @@ while(i<100000):
         ###############Checking for Universities
         if(not(uni_check(data))):
             errormsg(1, 'No Universities to show')
-            msglog('No Universities to show')
             i+=1
             continue
 
@@ -295,7 +297,7 @@ while(i<100000):
         connection.commit()
 
         pro_id=db_profile(insert_extractid) #### We just got the last piece of the puzzle. the auto-incremented id of the latest entry
-        msglog("Data for "+str(pro_id)+" entered")
+        msglog("Data for "+str(pro_id)+ " - "+insert_name+" entered")
 
         ###############University Data
         htmlcursor=data.find_all("table", "tdborder")[1].find_all("tr")
@@ -328,12 +330,12 @@ while(i<100000):
                             sql = "INSERT INTO `uni_list` (`name`) VALUES (%s)"
                             cursor.execute(sql, uni_name)
                         connection.commit()
-                        msglog("Inserted " + uni_name + "and also to list of universities")
+                        msglog("Inserted " + major + " at " + uni_name + " (and also to list of universities)")
                         result=db_uni_list_searchbyname(uni_name)
                         db_uni_data_enterall(pro_id, result["uni_id"], int(program), major, int(term), (year), int(uni_status), attend_status, uni_text)
                     else: #SQL hasn't returned empty rows so do this:
                         db_uni_data_enterall(pro_id, result["uni_id"], int(program), major, int(term), (year), int(uni_status), attend_status, uni_text)
-                        msglog("Inserted: " + uni_name)    
+                        msglog("Inserted " + major + " at " + uni_name)
         i+=1
         net=0
 
