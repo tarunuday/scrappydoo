@@ -136,7 +136,7 @@ def db_uni_data_enterall(pro_id,uni_id,program,major,term,year,uni_status,attend
     connection.commit()
 
 ##################################################Initialise
-i=4242                                              
+i=110937                                           
 ##################################################Initialise
 
 # Connect to the database
@@ -151,10 +151,10 @@ try:
     msglog("Connected to Database. Loop begins")
 
 except pymysql.err.OperationalError:
-    errorlog(3, "Access denied")
+    errormsg(3, "Access denied")
     i=9999999999
 
-while(i<100000):
+while(i<300000):
     ###############Start page no i
     try:
         link='http://edulix.com/unisearch/user.php?uid='+str(i)
